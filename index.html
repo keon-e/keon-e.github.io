@@ -12,6 +12,7 @@
       --muted: #78716c;
       --rule: #e7e5e4;
       --link: #1c1917;
+      --panel: #f3f2f0;
     }
     @media (prefers-color-scheme: dark) {
       :root {
@@ -20,6 +21,7 @@
         --muted: #a8a29e;
         --rule: #2e2b29;
         --link: #e7e5e4;
+        --panel: #1f1d1c;
       }
     }
 
@@ -49,6 +51,7 @@
       margin-bottom: 16px;
     }
     h3 { font-size: 16px; font-weight: 600; }
+    h4 { font-size: 15px; font-weight: 600; margin-top: 20px; }
 
     p { margin-top: 6px; }
 
@@ -59,6 +62,14 @@
       text-underline-offset: 3px;
     }
     a:hover { text-decoration-color: var(--text); }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 14px;
+      background: var(--panel);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
 
     .intro p { color: var(--muted); margin-top: 8px; }
 
@@ -89,13 +100,40 @@
     .meta { color: var(--muted); font-size: 14px; }
 
     ul.points { margin-top: 6px; padding-left: 18px; }
-    ul.points li + li { margin-top: 2px; }
+    ul.points li + li { margin-top: 4px; }
 
-    footer {
-      margin-top: 64px;
-      color: var(--muted);
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
       font-size: 14px;
     }
+    th, td {
+      text-align: left;
+      padding: 8px 10px 8px 0;
+      border-bottom: 1px solid var(--rule);
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 600; }
+    td:last-child, th:last-child { text-align: right; padding-right: 0; }
+
+    figure { margin-top: 16px; }
+    figure img {
+      width: 100%;
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      background: #fff;
+    }
+    figcaption { color: var(--muted); font-size: 14px; margin-top: 6px; }
+
+    .challenge {
+      margin-top: 12px;
+      padding: 12px 14px;
+      background: var(--panel);
+      border-radius: 6px;
+    }
+    .challenge strong { display: block; }
+    .challenge p { margin-top: 4px; font-size: 15px; }
   </style>
 </head>
 <body>
@@ -120,11 +158,42 @@
           <h3><a href="https://github.com/keon-e/cpp-tensor-autograd-cnn">Tensor Autograd Engine</a></h3>
           <span class="meta">C++, 2026</span>
         </div>
-        <p>A machine learning engine built from scratch in C++, with no ML libraries. It started as a scalar autograd engine and grew to support full tensors, convolution, and pooling.</p>
+        <p>A tensor library and automatic differentiation engine built from scratch in C++, with no ML libraries. It started as a scalar autograd engine and grew into a full N-dimensional tensor engine with broadcasting, matrix multiplication, and 2D convolution. I used it to train two neural networks on MNIST handwritten digits.</p>
+
+        <h4>Results</h4>
+        <table>
+          <tr><th>Model</th><th>Architecture</th><th>Accuracy</th></tr>
+          <tr><td>MLP</td><td>784 → 128 → 64 → 10</td><td>97.34%</td></tr>
+          <tr><td>CNN</td><td>2 conv layers + maxpool + MLP</td><td>98.02%</td></tr>
+        </table>
+        <p class="meta">Trained on 37,000 images and validated on 5,000, using a training loop I wrote myself.</p>
+
+        <figure>
+          <img src="loss_curve.png" alt="CNN training loss on MNIST over 10 epochs, dropping from about 32 to about 2.5">
+          <figcaption>Training loss drops sharply in the first few hundred batches, then keeps decreasing slowly over 10 epochs.</figcaption>
+        </figure>
+
+        <h4>How it works</h4>
         <ul class="points">
-          <li>Implemented backpropagation and tensor memory layout by hand</li>
-          <li>Trained an MLP to 97.34% and a CNN to 98.02% validation accuracy on MNIST</li>
+          <li>Tensors of any rank, with NumPy-style broadcasting</li>
+          <li>Reverse-mode autodiff using a topological sort of the computation graph</li>
+          <li>Every operation (<code>add</code>, <code>mul</code>, <code>relu</code>, <code>matmul</code>, <code>conv2d</code>, <code>maxpool2d</code>) has a hand-derived forward and backward pass</li>
+          <li>All operations share one stride-based indexing pattern, so adding a new dimension like a batch or channel axis only means extending the offset formula</li>
         </ul>
+
+        <h4>Problems I solved</h4>
+        <div class="challenge">
+          <strong>Dead ReLU on the output layer</strong>
+          <p>Applying ReLU to the final layer caused an output neuron to get stuck at zero with zero gradient, so the loss stopped improving. I removed ReLU from the output layer so it could produce unconstrained scores.</p>
+        </div>
+        <div class="challenge">
+          <strong>Exploding loss</strong>
+          <p>Initializing weights in a fixed range made activations grow with layer width, and the loss blew up from 10<sup>6</sup> to 10<sup>245</sup>. Scaling the range by 1/√n kept activations stable at any width.</p>
+        </div>
+        <div class="challenge">
+          <strong>A memory leak that survived the fix</strong>
+          <p>A full CNN run ran out of memory, so I switched to <code>shared_ptr</code>. The leak came back, because each tensor's backward function held a reference to the tensor itself. I tracked it down by testing each layer in isolation, and fixed it with a non-owning pointer.</p>
+        </div>
       </div>
     </section>
 
@@ -161,7 +230,10 @@
 
     <section>
       <h2>Outside of Code</h2>
-      <p>When I'm not coding, I'm usually doing something active. In high school, I played on the varsity basketball team and ran track and field. I love the competition, and being part of a team. I also played clarinet in the symphonic band for four years. Music is a big part of my life, and it was one of my favourite parts of high school.</p>
+      <p>When I'm not coding, I'm usually doing something active. In high school, I played on the varsity basketball team and ran track and field,
+        and I enjoy nearly every sport. I love the feeling of competition and being part of a team, and I feel that sports are integral to who I am. I also played
+        clarinet and piano in the symphonic band for four years. Music is a big part of my life, and it was one of my favourite parts of high school.
+        I enjoy video games, chess, poker, and strategy games in general. I am often drawn to fast-paced and competitive domains, where learning is involved.</p>
     </section>
 
   </main>
