@@ -175,20 +175,20 @@
 
         <h4>How it works</h4>
         <ul class="points">
-          <li>Tensors of any rank, with NumPy-style broadcasting</li>
+          <li>Tensors of any rank, with broadcasting</li>
           <li>Reverse-mode autodiff using a topological sort of the computation graph</li>
-          <li>Every operation (<code>add</code>, <code>mul</code>, <code>relu</code>, <code>matmul</code>, <code>conv2d</code>, <code>maxpool2d</code>) has a hand-derived forward and backward pass</li>
-          <li>All operations share one stride-based indexing pattern, so adding a new dimension like a batch or channel axis only means extending the offset formula</li>
+          <li>Every operation has a hand-derived forward and backward pass</li>
+          <li>All operations share the same stride-based indexing pattern, so adding a new dimension like a batch or channel axis only means extending the offset formula</li>
         </ul>
 
         <h4>Problems I solved</h4>
         <div class="challenge">
           <strong>Dead ReLU on the output layer</strong>
-          <p>Applying ReLU to the final layer caused an output neuron to get stuck at zero with zero gradient, so the loss stopped improving. I removed ReLU from the output layer so it could produce unconstrained scores.</p>
+          <p>Applying ReLU to the final layer caused an output neuron to get stuck at zero with zero gradient, so the loss stopped improving. I removed ReLU from the output layer so it could produce meaningful scores.</p>
         </div>
         <div class="challenge">
           <strong>Exploding loss</strong>
-          <p>Initializing weights in a fixed range made activations grow with layer width, and the loss blew up from 10<sup>6</sup> to 10<sup>245</sup>. Scaling the range by 1/√n kept activations stable at any width.</p>
+          <p>Initializing weights in a range of [-1,1] made activations grow with each layer, and the loss blew up from 10<sup>6</sup> to 10<sup>245</sup>. Scaling the range by 1/√n kept activations stable at any width.</p>
         </div>
         <div class="challenge">
           <strong>A memory leak that survived the fix</strong>
